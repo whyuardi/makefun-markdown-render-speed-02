@@ -1559,9 +1559,9 @@ function parseInline(s, refs) {
   }
   function emitLink(a) {
     flush();
-    nodes.push({ t: NT_LINK_O, href: a.href, title: null, auto: true });
+    nodes.push({ t: NT_LINK_O, href: a.href, title: null, auto: 'ext' });
     nodes.push({ t: NT_TEXT, s: s.slice(i, a.end) });
-    nodes.push({ t: NT_LINK_C, auto: true });
+    nodes.push({ t: NT_LINK_C, auto: 'ext' });
   }
 
   while (i < n) {
@@ -1720,12 +1720,13 @@ function parseInline(s, refs) {
             nodes.splice(bangIdx, 1, { t: NT_IMG, src: href, title, alt });
             i = endPos;
           } else {
-            // Strip autolink wrappers inside the link text: the URL or
-            // email becomes plain text of the outer link.
+            // Strip bare-URL autolink wrappers inside the link text:
+            // the URL becomes plain text of the outer link. Angle-
+            // bracket autolinks are kept as nested links.
             let removed = 0;
             for (let k = closeIdx - 1; k > openIdx; k--) {
               const nd = nodes[k];
-              if ((nd.t === NT_LINK_O || nd.t === NT_LINK_C) && nd.auto) { nodes.splice(k, 1); removed++; }
+              if ((nd.t === NT_LINK_O || nd.t === NT_LINK_C) && nd.auto === 'ext') { nodes.splice(k, 1); removed++; }
             }
             closeIdx -= removed;
             // Record the link-text barrier for emphasis pairing.
@@ -1759,9 +1760,9 @@ function parseInline(s, refs) {
         if (/^[A-Za-z][A-Za-z0-9+.-]{1,31}:[^<>\s]*$/.test(inner) || /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[a-zA-Z0-9])?)+$/.test(inner)) {
           const isEmail = inner.indexOf(':') === -1;
           flush();
-          nodes.push({ t: NT_LINK_O, href: isEmail ? 'mailto:' + inner : inner, title: null, auto: true });
+          nodes.push({ t: NT_LINK_O, href: isEmail ? 'mailto:' + inner : inner, title: null, auto: 'angle' });
           nodes.push({ t: NT_TEXT, s: inner });
-          nodes.push({ t: NT_LINK_C, auto: true });
+          nodes.push({ t: NT_LINK_C, auto: 'angle' });
           i = gt + 1;
           matched = true;
         }
