@@ -912,7 +912,9 @@ function tryTable(lines, j, end) {
   let k = j + 2;
   while (k < end) {
     const L = lines[k];
-    if (lineIsBlank(L)) break;
+    // A line with no characters at all ends the table, but a
+    // whitespace-only line is an (empty) row, not a blank line.
+    if (vrest(L) === '' && !L.lz) break;
     if (L.lz) { rows.push(splitTableRow(vrest(L))); k++; continue; }
     if (canInterrupt(L)) break;
     rows.push(splitTableRow(vrest(L)));
