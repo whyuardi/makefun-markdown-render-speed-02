@@ -487,7 +487,10 @@ function matchListItem(L, listIndent, ordered, bullet, delim) {
   const w = copyView(L);
   vskipAll(w);
   const vc = w.col - L.base;
-  if (vc < listIndent || vc > listIndent + 3) return null;
+  // A later item may be indented up to 3 past the list indent, or up
+  // to 3 before it (a list whose first item is indented still takes
+  // siblings at a lesser indent).
+  if (vc < listIndent - 3 || vc > listIndent + 3) return null;
   if (isThematicBreak(w)) return null;
   const m = tryListStart(w);
   if (!m) return null;
