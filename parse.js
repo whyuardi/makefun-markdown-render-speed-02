@@ -916,9 +916,12 @@ function tryTable(lines, j, end) {
   let k = j + 2;
   while (k < end) {
     const L = lines[k];
-    // A line with no characters at all ends the table, but a
-    // whitespace-only line is an (empty) row, not a blank line.
+    // A line with no characters at all ends the table. A whitespace-
+    // only line is an (empty) row only when it contains a tab; a
+    // spaces-only line ends the table (so a following refdef paragraph
+    // is still parsed as refdefs).
     if (vrest(L) === '' && !L.lz) break;
+    if (lineIsBlank(L) && !L.lz && vrest(L).indexOf('\t') === -1) break;
     if (L.lz) { rows.push(splitTableRow(vrest(L))); k++; continue; }
     if (canInterrupt(L)) break;
     rows.push(splitTableRow(vrest(L)));
