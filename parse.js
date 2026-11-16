@@ -939,9 +939,12 @@ function parseItem(lines, i, end, refs, marker, listIndent, ordered, bullet, del
   let hasContent = !prevBlank;
   // Fenced-code tracking: content lines of a fence opened inside this
   // item belong to the item even when less indented than ci, so they
-  // must not be marked lazy (a lazy line ends a fenced block).
+  // must not be marked lazy (a lazy line ends a fenced block). But a
+  // less-indented line before the fence has any content ends the fence
+  // (empty) and the item: it is not part of the item at all.
   let fenceCh = null;
   let fenceN = 0;
+  let fenceHasContent = false;
   {
     const fv = copyView(first);
     vskip(fv, fv.base + 3);
@@ -966,6 +969,7 @@ function parseItem(lines, i, end, refs, marker, listIndent, ordered, bullet, del
       // An item can begin with at most one blank line.
       if (!hasContent && prevBlank) break;
       inner.push({ s: '', i: 0, col: 0, rem: 0, base: 0, lz: 0, nl: L.nl });
+      if (fenceCh) fenceHasContent = true;
       prevBlank = true;
       j++;
       continue;
@@ -977,7 +981,9 @@ function parseItem(lines, i, end, refs, marker, listIndent, ordered, bullet, del
     const v = copyView(L);
     const c = vskip(v, L.base + ci);
     // Inside a fenced block, every non-blank line is content (even when
-    // less indented than ci); a closing fence ends the block.
+    // less indented than ci); a closing fence ends the block. But before
+    // the fence has any content, a less-indented non-closing line ends
+    // the fence (empty) and the item.
     if (fenceCh) {
       const w = copyView(L);
       vskipAll(w);
@@ -990,12 +996,15 @@ function parseItem(lines, i, end, refs, marker, listIndent, ordered, bullet, del
         vskipAll(w3);
         if (vch(w3) === '') closed = true;
       }
+      if (!closed && !fenceHasContent && c - L.base < ci) break;
       if (c - L.base >= ci) {
         inner.push({ s: L.s, i: v.i, col: v.col, rem: v.rem, base: L.base + ci, lz: 0, nl: L.nl });
+        fenceHasContent = true;
       } else {
         inner.push({ s: L.s, i: L.i, col: L.col, rem: L.rem, base: L.base, lz: 0, nl: L.nl });
+        fenceHasContent = true;
       }
-      if (closed) { fenceCh = null; fenceN = 0; }
+      if (closed) { fenceCh = null; fenceN = 0; fenceHasContent = false; }
       prevBlank = false;
       hasContent = true;
       j++;
