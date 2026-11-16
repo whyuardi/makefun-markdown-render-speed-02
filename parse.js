@@ -656,13 +656,14 @@ function parseHtmlBlock(lines, i, end, v, type, top) {
     }
   }
   // The trailing newline of the last line is kept unless the block is
-  // followed by a blank line, or the block ends because its container
-  // ends (not at the document's end).
+  // followed by a truly empty line, or the block ends because its
+  // container ends (not at the document's end). A whitespace-only line
+  // still keeps the newline.
   let text = '';
   for (let k = i; k < j; k++) {
     text += vrest(lines[k]);
     if (k < j - 1) text += '\n';
-    else if (j < end && !lineIsBlank(lines[j]) && !lines[j].lz) text += '\n';
+    else if (j < end && vrest(lines[j]) !== '' && !lines[j].lz) text += '\n';
     else if (j >= end && top && lines[k].nl) text += '\n';
   }
   return [{ t: 'html', s: text }, j];
