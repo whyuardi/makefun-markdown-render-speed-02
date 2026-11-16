@@ -1559,9 +1559,9 @@ function parseInline(s, refs) {
   }
   function emitLink(a) {
     flush();
-    nodes.push({ t: NT_LINK_O, href: a.href, title: null });
+    nodes.push({ t: NT_LINK_O, href: a.href, title: null, auto: true });
     nodes.push({ t: NT_TEXT, s: s.slice(i, a.end) });
-    nodes.push({ t: NT_LINK_C });
+    nodes.push({ t: NT_LINK_C, auto: true });
   }
 
   while (i < n) {
@@ -1658,18 +1658,19 @@ function parseInline(s, refs) {
       if (bi !== -1) {
         const br = brackets[bi];
         const openIdx = nodes.indexOf(br.node);
-        const closeIdx = nodes.indexOf(closeNode);
+        let closeIdx = nodes.indexOf(closeNode);
         // Label from the raw source slice (backslashes preserved).
         const labelText = s.slice(br.pos + 1, i - 1);
         let href = null;
         let title = null;
         let endPos = i;
         let isImage = br.image;
-        // A link's text may not contain another link (images may).
+        // A link's text may not contain another (bracket) link; an
+        // autolink inside is absorbed as plain text (images may).
         let hasLink = false;
         if (!br.image) {
           for (let k = openIdx + 1; k < closeIdx; k++) {
-            if (nodes[k].t === NT_LINK_O) { hasLink = true; break; }
+            if (nodes[k].t === NT_LINK_O && !nodes[k].auto) { hasLink = true; break; }
           }
         }
         if (!hasLink && s[i] === '(') {
@@ -1719,6 +1720,14 @@ function parseInline(s, refs) {
             nodes.splice(bangIdx, 1, { t: NT_IMG, src: href, title, alt });
             i = endPos;
           } else {
+            // Strip autolink wrappers inside the link text: the URL or
+            // email becomes plain text of the outer link.
+            let removed = 0;
+            for (let k = closeIdx - 1; k > openIdx; k--) {
+              const nd = nodes[k];
+              if ((nd.t === NT_LINK_O || nd.t === NT_LINK_C) && nd.auto) { nodes.splice(k, 1); removed++; }
+            }
+            closeIdx -= removed;
             // Record the link-text barrier for emphasis pairing.
             let lo = 1e9, hi = -1;
             const inside = new Set();
@@ -1750,9 +1759,9 @@ function parseInline(s, refs) {
         if (/^[A-Za-z][A-Za-z0-9+.-]{1,31}:[^<>\s]*$/.test(inner) || /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[a-zA-Z0-9])?)+$/.test(inner)) {
           const isEmail = inner.indexOf(':') === -1;
           flush();
-          nodes.push({ t: NT_LINK_O, href: isEmail ? 'mailto:' + inner : inner, title: null });
+          nodes.push({ t: NT_LINK_O, href: isEmail ? 'mailto:' + inner : inner, title: null, auto: true });
           nodes.push({ t: NT_TEXT, s: inner });
-          nodes.push({ t: NT_LINK_C });
+          nodes.push({ t: NT_LINK_C, auto: true });
           i = gt + 1;
           matched = true;
         }
